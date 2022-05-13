@@ -12,14 +12,33 @@ const Card = styled(motion.div)`
   position: absolute;
   width: 100px;
   height: 100px;
-  border: 2px solid purple;
+  background-color: orange;
+  color: white;
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+`;
+
+const Cell = styled.div`
+  background-color: lightgray;
+  border: none;
+  border-radius: 4px;
 `;
 
 const Grid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 100px);
+  grid-template-rows: repeat(4, 100px);
+  gap: 20px;
   position: relative;
-  width: 402px;
-  height: 402px;
+  background-color: darkgray;
+  box-sizing: content-box;
   border: 2px solid black;
+  border-radius: 1rem;
+  padding: 1rem;
+  margin: 1rem;
 `;
 
-export { TwoCol, Card, Grid };
+export { TwoCol, Card, Grid, Cell };

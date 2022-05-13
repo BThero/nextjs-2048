@@ -97,6 +97,33 @@ const rotateRight = (cards: Card[]): Card[] => {
   );
 };
 
+const addRandomCard = (cards: Card[]): Card[] => {
+  const emptySpaces = [];
+
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      if (!cards.find((item) => item.x == i && item.y == j)) {
+        emptySpaces.push({ x: i, y: j });
+      }
+    }
+  }
+
+  const n = emptySpaces.length;
+
+  if (n > 0) {
+    const { x, y } = emptySpaces[Math.trunc(Math.random() * n)];
+
+    cards.push({
+      x,
+      y,
+      value: 2,
+      id: Math.trunc(Math.random() * 1000)
+    });
+  }
+
+  return cards;
+};
+
 const handleMove = (cards: Card[], rotate: number): Card[] => {
   for (let i = 0; i < rotate; i++) {
     cards = rotateLeft(cards);
@@ -133,15 +160,12 @@ const handleMove = (cards: Card[], rotate: number): Card[] => {
   }
 
   let newCards: Card[] = [];
-  const emptySpaces = [];
 
   for (let i = 0; i < 4; i++) {
     for (let j = 0; j < 4; j++) {
       const cell = grid[i][j];
 
-      if (!cell) {
-        emptySpaces.push({ x: i, y: j });
-      } else {
+      if (cell) {
         newCards.push({
           x: i,
           y: j,
@@ -150,19 +174,6 @@ const handleMove = (cards: Card[], rotate: number): Card[] => {
         });
       }
     }
-  }
-
-  const n = emptySpaces.length;
-
-  if (n > 0) {
-    const { x, y } = emptySpaces[Math.trunc(Math.random() * n)];
-
-    newCards.push({
-      x,
-      y,
-      value: 2,
-      id: Math.trunc(Math.random() * 1000)
-    });
   }
 
   for (let i = 0; i < rotate; i++) {
@@ -204,16 +215,6 @@ export const gameStateMachine = createMachine<gameStateContext>(
             };
           }
         },
-        // always: [
-        //   {
-        //     cond: 'didWin',
-        //     target: 'won'
-        //   },
-        //   {
-        //     cond: 'didLose',
-        //     target: 'lost'
-        //   }
-        // ],
         on: {
           TICK: {
             actions: 'increaseSeconds'
@@ -223,13 +224,65 @@ export const gameStateMachine = createMachine<gameStateContext>(
             actions: 'stopGame'
           },
           MOVE: {
-            actions: 'move'
+            actions: 'move',
+            target: 'animating'
           }
         }
-      }
+      },
+      animating: {
+        invoke: {
+          id: 'animationDelay',
+          src: (context, event) =>
+            new Promise((resolve, reject) => {
+              const timer = setTimeout(() => {
+                clearTimeout(timer);
+                resolve(true);
+              }, 400);
+            }),
+          onDone: 'adding'
+        },
+        on: {
+          STOP: {
+            target: 'stopped',
+            actions: 'stopGame'
+          }
+        }
+      },
+      adding: {
+        always: [
+          {
+            cond: 'didWin',
+            target: 'won'
+          },
+          {
+            cond: 'didLose',
+            target: 'lost'
+          },
+          {
+            actions: 'addRandomCard',
+            target: 'playing'
+          }
+        ],
+        on: {
+          STOP: {
+            target: 'stopped',
+            actions: 'stopGame'
+          }
+        }
+      },
+      won: {},
+      lost: {}
     }
   },
   {
+    guards: {
+      didLose(context) {
+        return context.cards.length === 16;
+      },
+      didWin(context) {
+        return false;
+      }
+    },
     actions: {
       increaseSeconds: assign({
         seconds: (context: gameStateContext, event) => context.seconds + 1
@@ -239,6 +292,9 @@ export const gameStateMachine = createMachine<gameStateContext>(
       move: assign({
         cards: (context, event) =>
           handleMove(context.cards, rotations[event.direction] || 0)
+      }),
+      addRandomCard: assign({
+        cards: (context, event) => addRandomCard(context.cards)
       })
     }
   }
