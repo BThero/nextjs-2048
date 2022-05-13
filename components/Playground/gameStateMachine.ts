@@ -1,4 +1,6 @@
 import { createMachine, assign } from 'xstate';
+import { peekId } from 'services/data';
+import { isContext } from 'vm';
 
 interface IGridCell {
   value: number;
@@ -33,31 +35,6 @@ const createEmptyGrid = (n: number): TGrid => {
   for (let i = 0; i < n; i++) {
     res[i] = new Array(n).fill(null);
   }
-
-  return res;
-};
-
-const createStoppedGameState = (): gameStateContext => {
-  return {
-    seconds: 0,
-    score: 0,
-    cards: []
-  };
-};
-
-const createInitialGameState = (): gameStateContext => {
-  const res = createStoppedGameState();
-
-  const x = Math.trunc(Math.random() * 4);
-  const y = Math.trunc(Math.random() * 4);
-  const id = Math.trunc(Math.random() * 1000);
-
-  res.cards.push({
-    x,
-    y,
-    value: 2,
-    id
-  });
 
   return res;
 };
@@ -112,19 +89,29 @@ const addRandomCard = (cards: Card[]): Card[] => {
 
   if (n > 0) {
     const { x, y } = emptySpaces[Math.trunc(Math.random() * n)];
+    const id = peekId();
 
     cards.push({
       x,
       y,
       value: 2,
-      id: Math.trunc(Math.random() * 1000)
+      id
     });
   }
 
   return cards;
 };
 
-const handleMove = (cards: Card[], rotate: number): Card[] => {
+interface IhandleMoveReturn {
+  cards: Card[];
+  score: number;
+}
+
+const handleMove = (
+  cards: Card[],
+  rotate: number,
+  score: number
+): IhandleMoveReturn => {
   for (let i = 0; i < rotate; i++) {
     cards = rotateLeft(cards);
   }
@@ -149,8 +136,10 @@ const handleMove = (cards: Card[], rotate: number): Card[] => {
           canMerge = true;
         } else {
           newRow[pos] = cell;
+          score += cell.value;
+
+          cell.value *= 2;
           prev = cell;
-          prev.value *= 2;
           canMerge = false;
         }
       }
@@ -159,14 +148,14 @@ const handleMove = (cards: Card[], rotate: number): Card[] => {
     grid[i] = newRow;
   }
 
-  let newCards: Card[] = [];
+  cards = [];
 
   for (let i = 0; i < 4; i++) {
     for (let j = 0; j < 4; j++) {
       const cell = grid[i][j];
 
       if (cell) {
-        newCards.push({
+        cards.push({
           x: i,
           y: j,
           id: cell.id,
@@ -177,17 +166,64 @@ const handleMove = (cards: Card[], rotate: number): Card[] => {
   }
 
   for (let i = 0; i < rotate; i++) {
-    newCards = rotateRight(newCards);
+    cards = rotateRight(cards);
   }
 
-  return newCards;
+  return { cards, score };
 };
 
-/*
-  TODO: Add new states
-  - animating: waiting for board animations,
-  - adding: adding a new card
-*/
+const createStoppedGameState = (): gameStateContext => {
+  return {
+    seconds: 0,
+    score: 0,
+    cards: []
+  };
+};
+
+const createInitialGameState = (): gameStateContext => {
+  const res = createStoppedGameState();
+  res.cards = addRandomCard(res.cards);
+  return res;
+};
+
+const playingSubstates = {
+  initial: 'waiting',
+  states: {
+    waiting: {
+      on: {
+        MOVE: {
+          actions: 'move',
+          target: 'moving'
+        }
+      }
+    },
+    moving: {
+      invoke: {
+        id: 'animationDelay',
+        src: () =>
+          new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+              clearTimeout(timer);
+              resolve(true);
+            }, 400);
+          }),
+        onDone: 'adding'
+      }
+    },
+    adding: {
+      always: [
+        {
+          cond: 'didLose',
+          target: '#lost'
+        },
+        {
+          actions: 'addRandomCard',
+          target: 'waiting'
+        }
+      ]
+    }
+  }
+};
 
 export const gameStateMachine = createMachine<gameStateContext>(
   {
@@ -209,7 +245,6 @@ export const gameStateMachine = createMachine<gameStateContext>(
           src: () => (callback) => {
             const id = setInterval(() => callback('TICK'), 1000);
 
-            // Perform cleanup
             return () => {
               clearInterval(id);
             };
@@ -222,65 +257,25 @@ export const gameStateMachine = createMachine<gameStateContext>(
           STOP: {
             target: 'stopped',
             actions: 'stopGame'
-          },
-          MOVE: {
-            actions: 'move',
-            target: 'animating'
           }
-        }
-      },
-      animating: {
-        invoke: {
-          id: 'animationDelay',
-          src: (context, event) =>
-            new Promise((resolve, reject) => {
-              const timer = setTimeout(() => {
-                clearTimeout(timer);
-                resolve(true);
-              }, 400);
-            }),
-          onDone: 'adding'
         },
+        ...playingSubstates
+      },
+      lost: {
+        id: 'lost',
         on: {
           STOP: {
             target: 'stopped',
             actions: 'stopGame'
           }
         }
-      },
-      adding: {
-        always: [
-          {
-            cond: 'didWin',
-            target: 'won'
-          },
-          {
-            cond: 'didLose',
-            target: 'lost'
-          },
-          {
-            actions: 'addRandomCard',
-            target: 'playing'
-          }
-        ],
-        on: {
-          STOP: {
-            target: 'stopped',
-            actions: 'stopGame'
-          }
-        }
-      },
-      won: {},
-      lost: {}
+      }
     }
   },
   {
     guards: {
       didLose(context) {
         return context.cards.length === 16;
-      },
-      didWin(context) {
-        return false;
       }
     },
     actions: {
@@ -289,10 +284,9 @@ export const gameStateMachine = createMachine<gameStateContext>(
       }),
       startGame: assign(createInitialGameState()),
       stopGame: assign(createStoppedGameState()),
-      move: assign({
-        cards: (context, event) =>
-          handleMove(context.cards, rotations[event.direction] || 0)
-      }),
+      move: assign((context: gameStateContext, event) =>
+        handleMove(context.cards, rotations[event.direction], context.score)
+      ),
       addRandomCard: assign({
         cards: (context, event) => addRandomCard(context.cards)
       })

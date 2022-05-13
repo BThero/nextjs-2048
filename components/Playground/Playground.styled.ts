@@ -3,9 +3,10 @@ import { motion } from 'framer-motion';
 
 const TwoCol = styled.div`
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-evenly;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10%;
+  padding: 2rem;
 `;
 
 const Card = styled(motion.div)`
@@ -38,7 +39,10 @@ const Grid = styled.div`
   border: 2px solid black;
   border-radius: 1rem;
   padding: 1rem;
-  margin: 1rem;
 `;
 
-export { TwoCol, Card, Grid, Cell };
+const Score = styled.p`
+  font-size: 1.5rem;
+`;
+
+export { TwoCol, Card, Grid, Cell, Score };

@@ -2,19 +2,20 @@ import React, { useEffect, useState } from 'react';
 import * as S from './Playground.styled';
 import { gameStateMachine } from './gameStateMachine';
 import { useMachine } from '@xstate/react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
+import Button from 'components/Button';
 
 const genRandomColor = (): string => {
-  const r = Math.trunc(Math.random() * 256);
-  const g = Math.trunc(Math.random() * 256);
-  const b = Math.trunc(Math.random() * 256);
+  const r = 64 + Math.trunc(Math.random() * 192);
+  const g = 64 + Math.trunc(Math.random() * 192);
+  const b = 64 + Math.trunc(Math.random() * 192);
   return `rgb(${r}, ${g}, ${b})`;
 };
 
 const genRandomColorSet = (): Record<number, string> => {
   const res: Record<number, string> = {};
 
-  for (let i = 2; i <= 8096; i *= 2) {
+  for (let i = 2, j = 0; j < 30; i *= 2, j += 1) {
     res[i] = genRandomColor();
   }
 
@@ -28,8 +29,6 @@ const getPosition = (x: number): number => {
 };
 
 const getDirection = (key: string): string => {
-  console.log(key);
-
   switch (key) {
     case 'ArrowLeft':
       return 'left';
@@ -47,15 +46,26 @@ const getDirection = (key: string): string => {
 const Playground = () => {
   const [state, send] = useMachine(gameStateMachine);
 
+  const handleClick = () => {
+    console.log('click');
+
+    if (state.value === 'stopped') {
+      send('PLAY');
+    } else {
+      send('STOP');
+    }
+  };
+
   useEffect(() => {
     const keyPressHandler = (e: KeyboardEvent) => {
       const direction = getDirection(e.key);
-      console.log(direction);
 
-      send({
-        type: 'MOVE',
-        direction
-      });
+      if (direction.length > 0) {
+        send({
+          type: 'MOVE',
+          direction
+        });
+      }
     };
 
     window.addEventListener('keydown', keyPressHandler);
@@ -79,7 +89,8 @@ const Playground = () => {
               initial={{
                 x: getPosition(card.x),
                 y: getPosition(card.y),
-                opacity: 0
+                opacity: 0,
+                backgroundColor: valueColors[card.value]
               }}
               animate={{
                 x: getPosition(card.x),
@@ -102,30 +113,13 @@ const Playground = () => {
       </S.Grid>
 
       <div>
-        {state.value === 'stopped' && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              send('PLAY');
-            }}
-          >
-            Start game
-          </button>
-        )}
+        <Button
+          onClick={handleClick}
+          text={state.value === 'stopped' ? 'Start game' : 'Stop game'}
+        />
 
-        {state.value !== 'stopped' && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              send('STOP');
-            }}
-          >
-            Stop game
-          </button>
-        )}
-
-        <p>{state.value as string}</p>
-        <p>Score: {state.context.score}</p>
+        <pre>{JSON.stringify(state.value, null, 2)}</pre>
+        <S.Score>Score: {state.context.score}</S.Score>
         <p>{state.context.seconds} seconds</p>
       </div>
     </S.TwoCol>
