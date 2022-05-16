@@ -47,8 +47,6 @@ const Playground = () => {
   const [state, send] = useMachine(gameStateMachine);
 
   const handleClick = () => {
-    console.log('click');
-
     if (state.value === 'stopped') {
       send('PLAY');
     } else {
@@ -112,16 +110,20 @@ const Playground = () => {
         </AnimatePresence>
       </S.Grid>
 
-      <div>
+      <S.InfoWrapper>
         <Button
           onClick={handleClick}
-          text={state.value === 'stopped' ? 'Start game' : 'Stop game'}
+          text={
+            state.value === 'stopped' || state.value === 'lost'
+              ? 'Start game'
+              : 'Stop game'
+          }
         />
 
-        <pre>{JSON.stringify(state.value, null, 2)}</pre>
         <S.Score>Score: {state.context.score}</S.Score>
         <p>{state.context.seconds} seconds</p>
-      </div>
+        {state.value === 'lost' && <p>You lost :c</p>}
+      </S.InfoWrapper>
     </S.TwoCol>
   );
 };

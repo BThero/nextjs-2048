@@ -5,7 +5,27 @@ const Header = styled.header`
   padding: 2rem;
   background-color: rebeccapurple;
   align-items: center;
-  justify-content: space-evenly;
+  justify-content: space-around;
+  color: white;
 `;
 
-export { Header };
+const Title = styled.h1`
+  font-size: 2.5rem;
+`;
+
+const NavList = styled.ul`
+  display: flex;
+  gap: 1rem;
+  list-style-type: none;
+`;
+
+const NavItem = styled.li`
+  font-size: 1.25rem;
+
+  &:hover {
+    color: pink;
+    cursor: pointer;
+  }
+`;
+
+export { Header, Title, NavList, NavItem };

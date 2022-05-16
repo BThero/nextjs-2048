@@ -1,6 +1,5 @@
 import { createMachine, assign } from 'xstate';
-import { peekId } from 'services/data';
-import { isContext } from 'vm';
+import { peekId, addRecord } from 'services/data';
 
 interface IGridCell {
   value: number;
@@ -214,13 +213,19 @@ const playingSubstates = {
       always: [
         {
           cond: 'didLose',
-          target: '#lost'
+          target: 'recording'
         },
         {
           actions: 'addRandomCard',
           target: 'waiting'
         }
       ]
+    },
+    recording: {
+      always: {
+        actions: 'recordGame',
+        target: '#stopped'
+      }
     }
   }
 };
@@ -232,6 +237,7 @@ export const gameStateMachine = createMachine<gameStateContext>(
     context: createStoppedGameState(),
     states: {
       stopped: {
+        id: 'stopped',
         on: {
           PLAY: {
             target: 'playing',
@@ -255,20 +261,10 @@ export const gameStateMachine = createMachine<gameStateContext>(
             actions: 'increaseSeconds'
           },
           STOP: {
-            target: 'stopped',
-            actions: 'stopGame'
+            target: 'playing.recording'
           }
         },
         ...playingSubstates
-      },
-      lost: {
-        id: 'lost',
-        on: {
-          STOP: {
-            target: 'stopped',
-            actions: 'stopGame'
-          }
-        }
       }
     }
   },
@@ -289,7 +285,10 @@ export const gameStateMachine = createMachine<gameStateContext>(
       ),
       addRandomCard: assign({
         cards: (context, event) => addRandomCard(context.cards)
-      })
+      }),
+      recordGame: (context, event) => {
+        addRecord(context.score, context.seconds);
+      }
     }
   }
 );

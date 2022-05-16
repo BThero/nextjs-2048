@@ -45,4 +45,11 @@ const Score = styled.p`
   font-size: 1.5rem;
 `;
 
-export { TwoCol, Card, Grid, Cell, Score };
+const InfoWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+`;
+
+export { TwoCol, Card, Grid, Cell, Score, InfoWrapper };
