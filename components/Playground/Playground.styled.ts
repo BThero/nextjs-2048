@@ -45,6 +45,11 @@ const Score = styled.p`
   font-size: 1.5rem;
 `;
 
+const Counter = styled.p`
+  font-size: 1.25rem;
+  color: darkgray;
+`;
+
 const InfoWrapper = styled.div`
   display: flex;
   flex-direction: column;
@@ -52,4 +57,4 @@ const InfoWrapper = styled.div`
   gap: 1rem;
 `;
 
-export { TwoCol, Card, Grid, Cell, Score, InfoWrapper };
+export { TwoCol, Card, Grid, Cell, Score, InfoWrapper, Counter };

@@ -113,16 +113,11 @@ const Playground = () => {
       <S.InfoWrapper>
         <Button
           onClick={handleClick}
-          text={
-            state.value === 'stopped' || state.value === 'lost'
-              ? 'Start game'
-              : 'Stop game'
-          }
+          text={state.value === 'stopped' ? 'Start game' : 'Stop game'}
         />
 
         <S.Score>Score: {state.context.score}</S.Score>
-        <p>{state.context.seconds} seconds</p>
-        {state.value === 'lost' && <p>You lost :c</p>}
+        <S.Counter>{state.context.seconds} seconds</S.Counter>
       </S.InfoWrapper>
     </S.TwoCol>
   );
