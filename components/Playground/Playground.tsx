@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import * as S from './Playground.styled';
 import { gameStateMachine } from './gameStateMachine';
 import { useMachine } from '@xstate/react';
@@ -46,13 +46,78 @@ const getDirection = (key: string): string => {
 const Playground = () => {
   const [state, send] = useMachine(gameStateMachine);
 
-  const handleClick = () => {
+  const MemoGridBackground = useMemo(
+    () => (
+      <>
+        {[...new Array(16)].map((_, i) => (
+          <S.Cell key={i} />
+        ))}
+      </>
+    ),
+    []
+  );
+
+  const MemoCards = useMemo(
+    () => (
+      <AnimatePresence>
+        {state.context.cards.map((card) => (
+          <S.Card
+            key={card.id}
+            initial={{
+              x: getPosition(card.x),
+              y: getPosition(card.y),
+              opacity: 0,
+              backgroundColor: valueColors[card.value]
+            }}
+            animate={{
+              x: getPosition(card.x),
+              y: getPosition(card.y),
+              opacity: 1,
+              backgroundColor: valueColors[card.value]
+            }}
+            transition={{
+              duration: 0.2
+            }}
+            exit={{
+              opacity: 0,
+              scale: 0
+            }}
+          >
+            {card.value}
+          </S.Card>
+        ))}
+      </AnimatePresence>
+    ),
+    [state.context.cards]
+  );
+
+  const handleClick = useCallback(() => {
     if (state.value === 'stopped') {
       send('PLAY');
     } else {
       send('STOP');
     }
-  };
+  }, [send, state.value]);
+
+  const MemoScore = useMemo(
+    () => <S.Score>Score: {state.context.score}</S.Score>,
+    [state.context.score]
+  );
+
+  const MemoCounter = useMemo(
+    () => <S.Counter>{state.context.seconds} seconds</S.Counter>,
+    [state.context.seconds]
+  );
+
+  const MemoButton = useMemo(
+    () => (
+      <Button
+        onClick={handleClick}
+        text={state.value === 'stopped' ? 'Start game' : 'Stop game'}
+      />
+    ),
+    [state.value, handleClick]
+  );
 
   useEffect(() => {
     const keyPressHandler = (e: KeyboardEvent) => {
@@ -76,48 +141,14 @@ const Playground = () => {
   return (
     <S.TwoCol>
       <S.Grid>
-        {[...new Array(16)].map((_, i) => (
-          <S.Cell key={i} />
-        ))}
-
-        <AnimatePresence>
-          {state.context.cards.map((card) => (
-            <S.Card
-              key={card.id}
-              initial={{
-                x: getPosition(card.x),
-                y: getPosition(card.y),
-                opacity: 0,
-                backgroundColor: valueColors[card.value]
-              }}
-              animate={{
-                x: getPosition(card.x),
-                y: getPosition(card.y),
-                opacity: 1,
-                backgroundColor: valueColors[card.value]
-              }}
-              transition={{
-                duration: 0.2
-              }}
-              exit={{
-                opacity: 0,
-                scale: 0
-              }}
-            >
-              {card.value}
-            </S.Card>
-          ))}
-        </AnimatePresence>
+        {MemoGridBackground}
+        {MemoCards}
       </S.Grid>
 
       <S.InfoWrapper>
-        <Button
-          onClick={handleClick}
-          text={state.value === 'stopped' ? 'Start game' : 'Stop game'}
-        />
-
-        <S.Score>Score: {state.context.score}</S.Score>
-        <S.Counter>{state.context.seconds} seconds</S.Counter>
+        {MemoButton}
+        {MemoScore}
+        {MemoCounter}
       </S.InfoWrapper>
     </S.TwoCol>
   );
