@@ -57,40 +57,6 @@ const Playground = () => {
     []
   );
 
-  const MemoCards = useMemo(
-    () => (
-      <AnimatePresence>
-        {state.context.cards.map((card) => (
-          <S.Card
-            key={card.id}
-            initial={{
-              x: getPosition(card.x),
-              y: getPosition(card.y),
-              opacity: 0,
-              backgroundColor: valueColors[card.value]
-            }}
-            animate={{
-              x: getPosition(card.x),
-              y: getPosition(card.y),
-              opacity: 1,
-              backgroundColor: valueColors[card.value]
-            }}
-            transition={{
-              duration: 0.2
-            }}
-            exit={{
-              opacity: 0,
-              scale: 0
-            }}
-          >
-            {card.value}
-          </S.Card>
-        ))}
-      </AnimatePresence>
-    ),
-    [state.context.cards]
-  );
-
   const handleClick = useCallback(() => {
     if (state.value === 'stopped') {
       send('PLAY');
@@ -142,7 +108,34 @@ const Playground = () => {
     <S.TwoCol>
       <S.Grid>
         {MemoGridBackground}
-        {MemoCards}
+        <AnimatePresence>
+          {state.context.cards.map((card) => (
+            <S.Card
+              key={card.id}
+              initial={{
+                x: getPosition(card.x),
+                y: getPosition(card.y),
+                opacity: 0,
+                backgroundColor: valueColors[card.value]
+              }}
+              animate={{
+                x: getPosition(card.x),
+                y: getPosition(card.y),
+                opacity: 1,
+                backgroundColor: valueColors[card.value]
+              }}
+              transition={{
+                duration: 0.2
+              }}
+              exit={{
+                opacity: 0,
+                scale: 0
+              }}
+            >
+              {card.value}
+            </S.Card>
+          ))}
+        </AnimatePresence>
       </S.Grid>
 
       <S.InfoWrapper>
